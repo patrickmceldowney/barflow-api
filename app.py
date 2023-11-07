@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, render_template
 
 app = Flask(__name__)
 
@@ -48,6 +48,11 @@ cocktails = [
         "profiles": ["bitter", "sweet"],
     },
 ]
+
+
+@app.route("/")
+def home():
+    return render_template("home.html")
 
 
 def _find_next_id():
