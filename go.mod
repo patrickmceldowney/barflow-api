@@ -1,4 +1,4 @@
-module barflow/web-service
+module barflow.app/api
 
 go 1.19
 

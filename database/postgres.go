@@ -12,26 +12,26 @@ import (
 var DB *gorm.DB
 var err error
 
-type flavor struct {
+type Flavor struct {
 	gorm.Model
 	Name        string `json:"name" bind:"required"`
 	Description string `json:"description"`
 }
 
-type ingredient struct {
+type Ingredient struct {
 	gorm.Model
 	Name     string `json:"name" binding:"required"`
 	Category string `json:"category"` // e.g. spirit, mixer, garnish
 }
 
-type cocktail struct {
+type Cocktail struct {
 	gorm.Model
 	Name         string       `json:"name" bind:"required"`
 	Description  string       `json:"description"`
-	Ingredients  []ingredient `json:"ingredients" binding:"required"`
+	Ingredients  []Ingredient `json:"ingredients" binding:"required"`
 	Instructions string       `json:"instructions" bind:"required"`
 	Image        string       `json:"image"`
-	Flavors      []flavor     `json:"flavors"`    // sweet, sour, bitter, fruity, dry
+	Flavors      []Flavor     `json:"flavors"`    // sweet, sour, bitter, fruity, dry
 	Categories   []string     `json:"categories"` // martini, margarita, mocktail, etc.
 }
 
@@ -50,7 +50,7 @@ func DatabaseConnection() {
 	)
 
 	DB, err = gorm.Open(postgres.Open(dsn), &gorm.Config{})
-	DB.AutoMigrate(flavor{}, ingredient{}, cocktail{})
+	DB.AutoMigrate(Flavor{}, Ingredient{}, Cocktail{})
 
 	if err != nil {
 		log.Fatal("Error connecting to the datbase...", err)
