@@ -1,12 +1,18 @@
 package main
 
 import (
-	"net/http"
+	"fmt"
+
+	"barflow/web-service/database"
 
 	"github.com/gin-gonic/gin"
 )
 
-func getAlbums(c *gin.Context) {
-	var cocktails = []cocktail{{}}
-	c.IndentedJSON(http.StatusOK, cocktails)
+func main() {
+	fmt.Println("Starting application...")
+	database.DatabaseConnection()
+
+	r := gin.Default()
+
+	r.Run(":5000")
 }
