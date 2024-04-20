@@ -5,35 +5,13 @@ import (
 	"log"
 	"os"
 
+	"barflow.app/api/models"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 )
 
 var DB *gorm.DB
 var err error
-
-type Flavor struct {
-	gorm.Model
-	Name        string `json:"name" bind:"required"`
-	Description string `json:"description"`
-}
-
-type Ingredient struct {
-	gorm.Model
-	Name     string `json:"name" binding:"required"`
-	Category string `json:"category"` // e.g. spirit, mixer, garnish
-}
-
-type Cocktail struct {
-	gorm.Model
-	Name         string       `json:"name" bind:"required"`
-	Description  string       `json:"description"`
-	Ingredients  []Ingredient `json:"ingredients" binding:"required"`
-	Instructions string       `json:"instructions" bind:"required"`
-	Image        string       `json:"image"`
-	Flavors      []Flavor     `json:"flavors"`    // sweet, sour, bitter, fruity, dry
-	Categories   []string     `json:"categories"` // martini, margarita, mocktail, etc.
-}
 
 func DatabaseConnection() {
 	host := "localhost"
@@ -50,7 +28,7 @@ func DatabaseConnection() {
 	)
 
 	DB, err = gorm.Open(postgres.Open(dsn), &gorm.Config{})
-	DB.AutoMigrate(Flavor{}, Ingredient{}, Cocktail{})
+	DB.AutoMigrate(models.Flavor{}, models.Ingredient{}, models.Recipe{})
 
 	if err != nil {
 		log.Fatal("Error connecting to the datbase...", err)

@@ -2,8 +2,9 @@ package main
 
 import (
 	"fmt"
+	"net/http"
 
-	cocktails "barflow.app/api/controller/cocktails"
+	recipes "barflow.app/api/controller/recipes"
 	"barflow.app/api/database"
 
 	"github.com/gin-gonic/gin"
@@ -14,10 +15,16 @@ func main() {
 	database.DatabaseConnection()
 
 	r := gin.Default()
-	r.GET("/cocktails/:id", cocktails.ReadCocktail)
-	r.GET("/cocktails", cocktails.ReadCocktails)
-	r.POST("/cocktails", cocktails.CreateCocktail)
-	r.PUT("/cocktails/:id", cocktails.UpdateCocktail)
+
+	r.GET("/", homePage)
+	r.GET("/recipes/:id", recipes.ReadRecipe)
+	r.GET("/recipes", recipes.ListRecipes)
+	r.POST("/recipes", recipes.CreateRecipe)
+	r.PUT("/recipes/:id", recipes.UpdateRecipe)
 
 	r.Run(":5000")
+}
+
+func homePage(c *gin.Context) {
+	c.String(http.StatusOK, "This is my homepage")
 }
