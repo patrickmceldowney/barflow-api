@@ -1,6 +1,6 @@
 // @deno-types="npm:@types/express@4"
 import express, { NextFunction, Request, Response } from 'express';
-import demoData from './data_blob.json' with { type: "json" };
+import apiRouter from './api/index.ts';
 
 const app = express();
 const port = Number(Deno.env.get('PORT')) || 3000;
@@ -10,22 +10,13 @@ const reqLogger = (req: Request, _res: Response, next: NextFunction) => {
   next();
 };
 
+app.get('/', (_req, res) => {
+  res.send('<p>Wecome to the Barflow API</p>');
+});
+
+app.use(express.json());
 app.use(reqLogger);
-
-app.get('/cocktails', (_req, res) => {
-  res.status(200).json(demoData.cocktails)
-})
-
-app.get('/cocktails/:id', (req, res) => {
-  const idx = Number(req.params.id)
-  for (const cocktail of demoData.cocktails) {
-    if (cocktail.id === idx) {
-      return res.status(200).json(cocktail)
-    }
-  }
-
-  res.status(400).json({ msg: "Cocktail not found"})
-})
+app.use('/api', apiRouter);
 
 app.listen(port, () => {
   console.log(`Listening on port ${port}...`);
