@@ -1,6 +1,6 @@
 // @deno-types="npm:@types/express@4"
 import { Router } from 'express';
-import demoData from '../../data_blob.json' with { type: "json" };
+import demoData from '../../data/data_blob.json' with { type: "json" };
 
 
 const cocktailRouter = Router();
