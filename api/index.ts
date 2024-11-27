@@ -1,9 +1,17 @@
-// @deno-types="npm:@types/express@4"
-import { Router } from 'express';
+import { Router } from 'https://deno.land/x/oak@v17.1.3/mod.ts';
 import cocktailRouter from './routes/cocktail.ts';
 
-const apiRouter = Router();
+const router = new Router();
 
-apiRouter.use('/cocktails', cocktailRouter);
+router.get('/', (ctx) => {
+  ctx.response.status = 200;
+  ctx.response.body = '<h1>Wecome to the Barflow API</h1>';
+});
 
-export default apiRouter;
+router.use(
+  '/cocktails',
+  cocktailRouter.routes(),
+  cocktailRouter.allowedMethods()
+);
+
+export default router;

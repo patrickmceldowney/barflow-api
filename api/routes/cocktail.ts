@@ -1,23 +1,106 @@
-// @deno-types="npm:@types/express@4"
-import { Router } from 'express';
-import demoData from '../../data/data_blob.json' with { type: "json" };
+import { Router } from 'https://deno.land/x/oak@v17.1.3/mod.ts';
+import type { AppState, Cocktail } from '../../types/index.ts';
 
+const cocktailRouter = new Router<AppState>();
 
-const cocktailRouter = Router();
-
-cocktailRouter.get('/', (_req, res) => {
-  res.status(200).json(demoData.cocktails);
+cocktailRouter.get('/', async (ctx) => {
+  try {
+    const db = ctx.state.db;
+    const cocktails = await db.getCocktails();
+    ctx.response.status = 200;
+    ctx.response.body = cocktails;
+  } catch (error) {
+    console.error('Error getting cocktails', error);
+    ctx.response.status = 500;
+    ctx.response.body = {
+      message: 'Error getting cocktails',
+    };
+  }
 });
 
-cocktailRouter.get('/:id', (req, res) => {
-  const idx = Number(req.params.id);
-  for (const cocktail of demoData.cocktails) {
-    if (cocktail.id === idx) {
-      return res.status(200).json(cocktail);
-    }
+cocktailRouter.post('/', async (ctx) => {
+  try {
+    const db = ctx.state.db;
+    const data: Cocktail = await ctx.request.body.json();
+    const cocktailId = db.createCocktail(data);
+    console.log('Created cocktail with ID: ', cocktailId);
+    ctx.response.status = 201;
+    ctx.response.body = {
+      message: 'Cocktail created successfully',
+    };
+  } catch (error) {
+    console.log('Error getting cocktails', error);
+    ctx.response.status = 500;
+    ctx.response.body = {
+      message: 'Error getting cocktails',
+    };
   }
+});
 
-  res.status(400).json({ msg: 'Cocktail not found' });
+cocktailRouter.get('/:id', async (ctx) => {
+  try {
+    const db = ctx.state.db;
+    const cocktail = await db.getCocktailById(ctx.params.id);
+
+    if (!cocktail) {
+      ctx.response.status = 404;
+      ctx.response.body = { message: 'Cocktail not found' };
+      return;
+    }
+
+    ctx.response.body = cocktail;
+  } catch (error) {
+    console.error('Error getting cocktail', error);
+    ctx.response.status = 500;
+    ctx.response.body = {
+      message: 'Error getting cocktail',
+    };
+  }
+});
+
+cocktailRouter.put('/:id', async (ctx) => {
+  try {
+    const db = ctx.state.db;
+
+    const data: Cocktail = await ctx.request.body.json();
+    db.updateCocktail(ctx.params.id, data);
+
+    ctx.response.body = {
+      message: 'Cocktail updated successfully',
+    };
+  } catch (error) {
+    console.error('Error updating cocktail', error);
+    ctx.response.status = 500;
+    ctx.response.body = {
+      message: 'Error updating cocktail',
+    };
+  }
+});
+
+cocktailRouter.delete('/:id', async (ctx) => {
+  try {
+    const db = ctx.state.db;
+
+    const result = await db.deleteCocktail(ctx.params.id);
+
+    if (!result.rowCount) {
+      ctx.response.status = 404;
+      ctx.response.body = {
+        message: 'Cocktail not found',
+      };
+      return;
+    }
+
+    ctx.response.body = {
+      message: 'Cocktail deleted successfully',
+    };
+  } catch (error) {
+    console.error('Error updating cocktail', error);
+    ctx.response.status = 500;
+    ctx.response.body = {
+      message: 'Error updating cocktail',
+    };
+  }
 });
 
 export default cocktailRouter;
