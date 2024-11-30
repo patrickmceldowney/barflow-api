@@ -2,15 +2,14 @@ import router from './api/index.ts';
 import { Router } from 'https://deno.land/x/oak@v17.1.3/mod.ts';
 import { oakCors } from 'https://deno.land/x/cors@v1.2.2/mod.ts';
 import { Application } from 'https://deno.land/x/oak@v17.1.3/mod.ts';
-import { Database } from './tools/db.ts';
+import { DatabaseClient } from './tools/db.ts';
 import { AppState } from './types/index.ts';
 
 const port = Number(Deno.env.get('PORT')) || 3000;
 const app = new Application<AppState>();
-const db = new Database();
+const db = new DatabaseClient();
 
 try {
-  await db.connect();
   console.log(`Connected to the database...`);
 
   // Inject the db instance into the routes
@@ -42,22 +41,26 @@ try {
   });
 
   // Routes
-  const apiRouter = new Router({ prefix: '/api' });
+  const apiRouter = new Router();
   apiRouter.use(router.routes());
   apiRouter.use(router.allowedMethods());
+
+  apiRouter.get('/', (ctx) => {
+    ctx.response.status = 200;
+    ctx.response.body = '<h1>Wecome to the Barflow API</h1>';
+    ctx.response.type = 'html';
+  });
 
   app.use(apiRouter.routes());
   app.use(apiRouter.allowedMethods());
 
+  console.log(`Listening on port ${port}...`);
   await app.listen({ port });
 } catch (error) {
   console.error(`Error starting application: `, error);
-} finally {
-  await db.disconnect();
 }
 
-Deno.addSignalListener('SIGINT', async () => {
+Deno.addSignalListener('SIGINT', () => {
   console.log('Gracefully shutting down...');
-  await db.disconnect();
   Deno.exit();
 });

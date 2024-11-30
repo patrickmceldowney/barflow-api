@@ -1,30 +1,7 @@
-import type { Database } from '../tools/db.ts';
+import type { DatabaseClient } from '../tools/db.ts';
 
 export interface AppState {
-  db: Database;
-}
-
-export interface Cocktail {
-  id: number;
-  name: string;
-  description?: string;
-  garnish: string;
-  glass: Glass;
-  category: CocktailCategory;
-  ingredients: CocktailIngredient[];
-  recipe_steps: RecipeStep[];
-}
-
-export interface CocktailIngredient {
-  id: string;
-  name: string;
-  quantity: number;
-  unit: Unit;
-}
-
-export interface RecipeStep {
-  step_number: number;
-  instruction: string;
+  db: DatabaseClient;
 }
 
 export enum Unit {
