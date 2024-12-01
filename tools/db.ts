@@ -7,7 +7,7 @@ export class DatabaseClient {
   constructor() {
     this.supabase = createClient<Database>(
       Deno.env.get('SUPABASE_URL') || '',
-      Deno.env.get('SUPABASE_KEY') || ''
+      Deno.env.get('SUPABASE_SECRET_KEY') || ''
     );
   }
 

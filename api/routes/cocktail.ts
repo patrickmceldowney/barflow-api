@@ -1,7 +1,10 @@
 import { Router } from 'https://deno.land/x/oak@v17.1.3/mod.ts';
 import type { AppState } from '../../types/index.ts';
+import { apiAuth } from '../../tools/middleware.ts';
 
 const cocktailRouter = new Router<AppState>();
+
+cocktailRouter.use(apiAuth);
 
 cocktailRouter.get('/', async (ctx) => {
   try {
