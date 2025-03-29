@@ -7,6 +7,15 @@ import type {
   Glassware,
   IngredientType,
 } from '../types/index.ts';
+import { createSlug } from '../tools/index.ts';
+
+const isDryRun = Deno.args.includes('--dry-run');
+
+console.log(
+  isDryRun
+    ? '🔍 DRY RUN MODE: No database changes will be made'
+    : '💾 LIVE MODE: Database changes will be executed'
+);
 
 const supabase = createClient<Database>(
   Deno.env.get('SUPABASE_URL') || '',
@@ -66,102 +75,147 @@ async function seedDatabase() {
     console.log('Starting database seeding...');
 
     for (const cocktail of newCocktails) {
+      const cocktailSlug = createSlug(cocktail.name);
+
       const { data: existingCocktail } = await supabase
         .from('cocktails')
         .select('id')
-        .eq('name', cocktail.name)
+        .eq('slug', cocktailSlug)
         .maybeSingle();
 
       let cocktailId: number;
 
       if (existingCocktail) {
-        console.log(`Cocktail "${cocktail.name}" already exists, updating...`);
+        console.log(
+          `Cocktail "${cocktail.name}" (slug: ${cocktailSlug}) already exists, updating...`
+        );
         cocktailId = existingCocktail.id;
 
-        // update cocktail
-        await supabase
-          .from('cocktails')
-          .update({
-            description: cocktail.description,
-            garnish: cocktail.garnish,
-            glass: cocktail.glass as Glassware,
-            category: cocktail.category as CocktailCategory,
-            updated_at: new Date().toISOString(),
-          })
-          .eq('id', cocktailId);
+        // update cocktail but not the slug
+        await dbOperation('update', `cocktail "${cocktail.name}"`, async () => {
+          return await supabase
+            .from('cocktails')
+            .update({
+              name: cocktail.name,
+              description: cocktail.description,
+              garnish: cocktail.garnish,
+              glass: cocktail.glass as Glassware,
+              category: cocktail.category as CocktailCategory,
+              updated_at: new Date().toISOString(),
+            })
+            .eq('id', cocktailId);
+        });
+
+        if (isDryRun) cocktailId = 9999; // fake id for dry run
       } else {
         console.log(`Adding new cocktail: ${cocktail.name}`);
 
-        const { data: newCocktail, error: cocktailError } = await supabase
-          .from('cocktails')
-          .insert({
-            name: cocktail.name,
-            description: cocktail.description,
-            garnish: cocktail.garnish,
-            glass: cocktail.glass as Glassware,
-            category: cocktail.category as CocktailCategory,
-          })
-          .select();
+        const insertResult = await dbOperation(
+          'insert',
+          `cocktail: "${cocktail.name}"`,
+          async () => {
+            const { data, error } = await supabase
+              .from('cocktails')
+              .insert({
+                name: cocktail.name,
+                slug: cocktailSlug,
+                description: cocktail.description,
+                garnish: cocktail.garnish,
+                glass: cocktail.glass as Glassware,
+                category: cocktail.category as CocktailCategory,
+              })
+              .select();
 
-        if (cocktailError) {
-          console.error(
-            `Error adding cocktail ${cocktail.name}:`,
-            cocktailError
-          );
-          continue;
+            if (error) throw error;
+            return data;
+          }
+        );
+
+        if (!isDryRun && insertResult) {
+          cocktailId = insertResult[0].id;
+        } else {
+          cocktailId = 9999;
         }
-
-        cocktailId = newCocktail[0].id;
       }
 
       // Delete existing recipes if updating
       if (existingCocktail) {
-        await supabase.from('recipes').delete().eq('cocktail_id', cocktailId);
+        await dbOperation(
+          'delete',
+          `existing recipe steps for cocktail "${cocktail.name}"`,
+          async () => {
+            return await supabase
+              .from('recipes')
+              .delete()
+              .eq('cocktail_id', cocktailId);
+          }
+        );
       }
 
       // add recipe steps
       for (let i = 0; i < cocktail.recipe_steps.length; i++) {
-        await supabase.from('recipes').insert({
-          cocktail_id: cocktailId,
-          step_number: i + 1,
-          instruction: cocktail.recipe_steps[i],
-        });
+        await dbOperation(
+          'insert',
+          `recipe step ${i + 1} for cocktail "${cocktail.name}"`,
+          async () => {
+            return await supabase.from('recipes').insert({
+              cocktail_id: cocktailId,
+              step_number: i + 1,
+              instruction: cocktail.recipe_steps[i],
+            });
+          }
+        );
       }
 
       // Process ingredients
       for (const ingredient of cocktail.ingredients) {
+        const ingredientSlug = createSlug(ingredient.name);
+
         // check if ingredient exists
         const { data: existingIngredient } = await supabase
           .from('ingredients')
           .select('id')
-          .eq('name', ingredient.name)
+          .eq('slug', ingredientSlug)
           .maybeSingle();
 
         let ingredientId: number;
 
         if (existingIngredient) {
           ingredientId = existingIngredient.id;
+          console.log(
+            `Using existing ingredient: ${ingredient.name} (slug: ${ingredientSlug})`
+          );
         } else {
           // add new ingredient
-          const { data: newIngredient, error: ingredientError } = await supabase
-            .from('ingredients')
-            .insert({
-              name: ingredient.name,
-              type: ingredient.type as IngredientType,
-              description: '',
-              allergens: '',
-            })
-            .select();
+          const insertResult = await dbOperation(
+            'insert',
+            `ingredient "${ingredient.name}"`,
+            async () => {
+              const { data, error } = await supabase
+                .from('ingredients')
+                .insert({
+                  slug: ingredientSlug,
+                  name: ingredient.name,
+                  type: ingredient.type as IngredientType,
+                  description: '',
+                  allergens: '',
+                })
+                .select();
 
-          if (ingredientError) {
-            console.error(
-              `Error adding ingredient ${ingredient.name}:`,
-              ingredientError
-            );
-            continue;
+              if (error) throw error;
+              return data;
+            }
+          );
+
+          if (!isDryRun && insertResult) {
+            ingredientId = insertResult[0].id;
+          } else {
+            ingredientId = 9999;
           }
 
-          ingredientId = newIngredient[0].id;
+          console.log(
+            `Added new ingredient: ${ingredient.name} (slug: ${ingredientSlug})`
+          );
         }
 
         // Check if unit exists
@@ -185,53 +239,79 @@ async function seedDatabase() {
           if (ingredient.unit === 'tablespoon' || ingredient.unit === 'tbsp')
             abbreviation = 'tbsp';
 
-          const { data: newUnit, error: unitError } = await supabase
-            .from('units')
-            .insert({
-              name: ingredient.unit,
-              abbreviation,
-            })
-            .select();
+          const insertResult = await dbOperation(
+            'insert',
+            `unit: "${ingredient.unit}"`,
+            async () => {
+              const { data, error } = await supabase
+                .from('units')
+                .insert({
+                  name: ingredient.unit,
+                  abbreviation,
+                })
+                .select();
 
-          if (unitError) {
-            console.error(`Error adding unit ${ingredient.unit}:`, unitError);
-            continue;
+              if (error) throw error;
+              return data;
+            }
+          );
+
+          if (!isDryRun && insertResult) {
+            unitId = insertResult[0].id;
+          } else {
+            unitId = 9999;
           }
-
-          unitId = newUnit[0].id;
         }
 
         // check if cocktail ingredient already exists
-        const { data: existingCocktailIngredient } = await supabase
-          .from('cocktail_ingredients')
-          .select('id')
-          .eq('cocktail_id', cocktailId)
-          .eq('ingredient_id', ingredientId)
-          .maybeSingle();
+        const { data: existingCocktailIngredient } = !isDryRun
+          ? await supabase
+              .from('cocktail_ingredients')
+              .select('id')
+              .eq('cocktail_id', cocktailId)
+              .eq('ingredient_id', ingredientId)
+              .maybeSingle()
+          : { data: null };
 
         if (existingCocktailIngredient) {
-          await supabase
-            .from('cocktail_ingredients')
-            .update({ quantity: ingredient.quantity, unit: unitId })
-            .eq('id', existingCocktailIngredient.id);
+          await dbOperation(
+            'update',
+            `cocktail ingredient relation for "${cocktail.name}" and "${ingredient.name}"`,
+            async () => {
+              return await supabase
+                .from('cocktail_ingredients')
+                .update({ quantity: ingredient.quantity, unit: unitId })
+                .eq('id', existingCocktailIngredient.id);
+            }
+          );
         } else {
-          await supabase.from('cocktail_ingredients').insert({
-            cocktail_id: cocktailId,
-            ingredient_id: ingredientId,
-            quantity: ingredient.quantity,
-            unit: unitId,
-          });
+          await dbOperation(
+            'insert',
+            `cocktail ingredient relation for "${cocktail.name}" and "${ingredient.name}"`,
+            async () => {
+              return await supabase.from('cocktail_ingredients').insert({
+                cocktail_id: cocktailId,
+                ingredient_id: ingredientId,
+                quantity: ingredient.quantity,
+                unit: unitId,
+              });
+            }
+          );
         }
 
-        console.log(`Successfully processed cocktail: ${cocktail.name}`);
+        console.log(
+          `Successfully processed cocktail ingredient for ${cocktail.name}: ${ingredient.name} / ${ingredient.quantity} ${ingredient.unit}`
+        );
       }
 
       // Process flavor profiles
       for (const flavor of cocktail.flavor_profiles) {
+        const flavorSlug = createSlug(flavor.name);
+
         const { data: existingFlavor } = await supabase
           .from('flavor_profiles')
           .select('id')
-          .eq('name', flavor.name)
+          .eq('slug', flavorSlug)
           .maybeSingle();
 
         let flavorId: number;
@@ -239,55 +319,102 @@ async function seedDatabase() {
         if (existingFlavor) {
           flavorId = existingFlavor.id;
         } else {
-          const { data: newFlavor, error: flavorError } = await supabase
-            .from('flavor_profiles')
-            .insert({
-              name: flavor.name,
-              description:
-                flavorProfileDescriptions[flavor.name.toLowerCase()] ?? '',
-            })
-            .select();
+          const insertResult = await dbOperation(
+            'insert',
+            `flavor profile "${flavor.name}"`,
+            async () => {
+              const { data, error } = await supabase
+                .from('flavor_profiles')
+                .insert({
+                  slug: flavorSlug,
+                  name: flavor.name,
+                  description:
+                    flavorProfileDescriptions[flavor.name.toLowerCase()] ?? '',
+                })
+                .select();
 
-          if (flavorError) {
-            console.error(
-              `Error adding flavor profile ${flavor.name}:`,
-              flavorError
-            );
-            continue;
+              if (error) throw error;
+              return data;
+            }
+          );
+
+          if (!isDryRun && insertResult) {
+            flavorId = insertResult[0].id;
+          } else {
+            flavorId = 9999;
           }
-
-          flavorId = newFlavor[0].id;
         }
 
         // check if cocktial flavor profile already exists
-        const { data: existingCocktailFlavor } = await supabase
-          .from('cocktail_flavor_profiles')
-          .select('id')
-          .eq('cocktail_id', cocktailId)
-          .eq('flavor_profile_id', flavorId)
-          .maybeSingle();
+        const { data: existingCocktailFlavor } = !isDryRun
+          ? await supabase
+              .from('cocktail_flavor_profiles')
+              .select('id')
+              .eq('cocktail_id', cocktailId)
+              .eq('flavor_profile_id', flavorId)
+              .maybeSingle()
+          : { data: null };
 
         if (existingCocktailFlavor) {
           // update cocktail flavor profile
-          await supabase
-            .from('cocktail_flavor_profiles')
-            .update({
-              intensity: flavor.intensity || 3,
-            })
-            .eq('id', existingCocktailFlavor.id);
+          await dbOperation(
+            'update',
+            `cocktail flavor profile relation for "${cocktail.name}" and "${flavor.name}"`,
+            async () => {
+              return await supabase
+                .from('cocktail_flavor_profiles')
+                .update({
+                  intensity: flavor.intensity || 3,
+                })
+                .eq('id', existingCocktailFlavor.id);
+            }
+          );
         } else {
-          // add cocktail flavor profile
-          await supabase.from('cocktail_flavor_profiles').insert({
-            cocktail_id: cocktailId,
-            flavor_profile_id: flavorId,
-            intensity: flavor.intensity || 3,
-          });
+          await dbOperation(
+            'insert',
+            `cocktail flavor profile relation for "${cocktail.name}" and "${flavor.name}"`,
+            async () => {
+              return await supabase.from('cocktail_flavor_profiles').insert({
+                cocktail_id: cocktailId,
+                flavor_profile_id: flavorId,
+                intensity: flavor.intensity || 3,
+              });
+            }
+          );
         }
+
+        console.log(
+          `Finished processing cocktail: ${cocktail.name} (slug: ${cocktailSlug})`
+        );
       }
 
-      console.log('All cocktail processed...');
+      console.log(
+        isDryRun
+          ? '🔍 DRY RUN COMPLETED: No changes were made to the database'
+          : '💾 LIVE RUN COMPLETED: All changes were applied to the database'
+      );
     }
   } catch (error) {
     console.error('Error adding cocktails:', error);
   }
 }
+
+async function dbOperation<T>(
+  operationName: string,
+  entity: string,
+  queryFn: () => Promise<T>
+): Promise<T | null> {
+  if (isDryRun) {
+    console.log(`[DRY RUN] Would ${operationName} ${entity}`);
+    return null;
+  }
+
+  try {
+    return await queryFn();
+  } catch (error) {
+    console.error(`Error ${operationName} ${entity}: `, error);
+    throw error;
+  }
+}
+
+seedDatabase();

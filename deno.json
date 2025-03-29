@@ -2,7 +2,9 @@
   "tasks": {
     "dev": "deno run --allow-read --allow-net --env-file=.env --allow-env --watch main.ts",
     "start": "deno run --allow-read --allow-net --env-file=.env --allow-env main.ts",
-    "gen:types": "supabase gen types typescript --project-id dbfcrukvoknziifobyer > database.types.ts"
+    "seed": "deno run --allow-read --allow-net --env-file=.env --allow-env scripts/seed.ts",
+    "seed-dry-run": "deno run --allow-read --allow-net --env-file=.env --allow-env scripts/seed.ts --dry-run",
+    "gen:types": "supabase gen types typescript --project-id dbfcrukvoknziifobyer > tydatabase.types.ts"
   },
   "imports": {
     "@std/assert": "jsr:@std/assert@1",
