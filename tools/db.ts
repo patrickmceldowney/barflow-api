@@ -1,5 +1,6 @@
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { Database } from '../types/database.types.ts';
+import type { CocktailCreatePayload } from '../types/api.ts';
 
 export class DatabaseClient {
   private supabase: SupabaseClient<Database>;
@@ -33,6 +34,13 @@ export class DatabaseClient {
 
   async deleteCocktail(id: string) {
     const result = await this.supabase.from('cocktails').delete().eq('id', id);
+    return result;
+  }
+
+  async createCocktail(cocktailData: CocktailCreatePayload) {
+    const result = await this.supabase.rpc('create_cocktail', {
+      cocktail_data: cocktailData,
+    });
     return result;
   }
 }
