@@ -1,6 +1,13 @@
+# Node modules
+node_modules/
+
+# Environment variables
 .env
+.env.*.local
 
 /.idea/
 /.vs/
 /.vscode/
 /generated/prisma
+
+docker-compose.override.yml

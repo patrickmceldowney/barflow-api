@@ -1,0 +1,52 @@
+version: '3.8'
+
+services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: barflow-api
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      DATABASE_URL: postgresql://barflow_user:barflow_password@postgres:5432/barflow
+      JWT_SECRET: ${JWT_SECRET}
+      API_KEY: ${API_KEY}
+      CORS_ORIGIN: ${CORS_ORIGIN}
+    ports:
+      - "3000:3000"
+    depends_on:
+      - postgres
+    networks:
+      - barflow-network
+
+  postgres:
+    image: postgres:15-alpine
+    container_name: barflow-postgres-prod
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: barflow
+      POSTGRES_USER: barflow_user
+      POSTGRES_PASSWORD: barflow_password
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - barflow-network
+
+  # Optional: Redis for caching (uncomment when needed)
+  # redis:
+  #   image: redis:7-alpine
+  #   container_name: barflow-redis
+  #   restart: unless-stopped
+  #   volumes:
+  #     - redis_data:/data
+  #   networks:
+  #     - barflow-network
+
+volumes:
+  postgres_data:
+
+networks:
+  barflow-network:
+    driver: bridge 

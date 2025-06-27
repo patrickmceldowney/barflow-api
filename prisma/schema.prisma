@@ -1,0 +1,236 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  username  String   @unique
+  password  String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  preferences UserPreferences?
+  favorites   UserFavorite[]
+
+  @@map("users")
+}
+
+model UserPreferences {
+  id                    String            @id @default(uuid())
+  userId                String            @unique
+  favoriteFlavors       String[]          @default([])
+  favoriteIngredients   String[]          @default([])
+  dietaryRestrictions   String[]          @default([])
+  alcoholPreference     AlcoholPreference @default(moderate)
+  skillLevel            SkillLevel        @default(beginner)
+  preferredGlassware    String[]          @default([])
+  createdAt             DateTime          @default(now())
+  updatedAt             DateTime          @updatedAt
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("user_preferences")
+}
+
+model Cocktail {
+  id          Int      @id @default(autoincrement())
+  name        String
+  slug        String   @unique
+  description String?
+  garnish     String?
+  glass       Glassware
+  category    CocktailCategory
+  difficulty  SkillLevel @default(beginner)
+  viewCount   Int      @default(0)
+  favoriteCount Int    @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  ingredients     CocktailIngredient[]
+  recipeSteps     RecipeStep[]
+  flavorProfiles  CocktailFlavorProfile[]
+  favorites       UserFavorite[]
+
+  @@map("cocktails")
+}
+
+model Ingredient {
+  id          Int             @id @default(autoincrement())
+  name        String
+  slug        String          @unique
+  type        IngredientType
+  description String?
+  allergens   String?
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+
+  // Relations
+  cocktails CocktailIngredient[]
+
+  @@map("ingredients")
+}
+
+model CocktailIngredient {
+  id           Int     @id @default(autoincrement())
+  cocktailId   Int
+  ingredientId Int
+  quantity     Float
+  unitId       Int
+  createdAt    DateTime @default(now())
+
+  // Relations
+  cocktail   Cocktail   @relation(fields: [cocktailId], references: [id], onDelete: Cascade)
+  ingredient Ingredient @relation(fields: [ingredientId], references: [id], onDelete: Cascade)
+  unit       Unit       @relation(fields: [unitId], references: [id])
+
+  @@unique([cocktailId, ingredientId])
+  @@map("cocktail_ingredients")
+}
+
+model Unit {
+  id           Int     @id @default(autoincrement())
+  name         String  @unique
+  abbreviation String?
+  createdAt    DateTime @default(now())
+
+  // Relations
+  cocktailIngredients CocktailIngredient[]
+
+  @@map("units")
+}
+
+model RecipeStep {
+  id          Int      @id @default(autoincrement())
+  cocktailId  Int
+  stepNumber  Int
+  instruction String
+  createdAt   DateTime @default(now())
+
+  // Relations
+  cocktail Cocktail @relation(fields: [cocktailId], references: [id], onDelete: Cascade)
+
+  @@unique([cocktailId, stepNumber])
+  @@map("recipes")
+}
+
+model FlavorProfile {
+  id          Int      @id @default(autoincrement())
+  name        String
+  slug        String   @unique
+  description String?
+  createdAt   DateTime @default(now())
+
+  // Relations
+  cocktails CocktailFlavorProfile[]
+
+  @@map("flavor_profiles")
+}
+
+model CocktailFlavorProfile {
+  id               Int   @id @default(autoincrement())
+  cocktailId       Int
+  flavorProfileId  Int
+  intensity        Int   @default(3)
+  createdAt        DateTime @default(now())
+
+  // Relations
+  cocktail      Cocktail      @relation(fields: [cocktailId], references: [id], onDelete: Cascade)
+  flavorProfile FlavorProfile @relation(fields: [flavorProfileId], references: [id], onDelete: Cascade)
+
+  @@unique([cocktailId, flavorProfileId])
+  @@map("cocktail_flavor_profiles")
+}
+
+model UserFavorite {
+  id         String   @id @default(uuid())
+  userId     String
+  cocktailId Int
+  addedAt    DateTime @default(now())
+
+  // Relations
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  cocktail Cocktail @relation(fields: [cocktailId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, cocktailId])
+  @@map("user_favorites")
+}
+
+// Enums
+enum Glassware {
+  wine
+  martini
+  rocks
+  coupe
+  highball
+  collins
+  shot
+  tiki_mug
+  copper_mug
+  margarita
+  beer_mug
+  pint
+  hurricane
+  snifter
+  julep
+  glencairn
+  punch_bowl
+  irish_coffee
+  coupe_martini
+}
+
+enum CocktailCategory {
+  spirit_forward
+  sour
+  tiki
+  fizz
+  smash
+  collins
+  blended
+  digestif
+  apertif
+  shooter
+  mocktail
+}
+
+enum IngredientType {
+  spirit
+  liqueur
+  juice
+  mixer
+  bitter
+  garnish
+  ice
+  syrup
+  vermouth
+  fortified_wine
+  special
+}
+
+enum AlcoholPreference {
+  none
+  light
+  moderate
+  strong
+}
+
+enum SkillLevel {
+  beginner
+  intermediate
+  advanced
+}
