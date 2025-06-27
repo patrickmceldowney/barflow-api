@@ -1,4 +1,4 @@
-import type { CocktailCategory, Glassware } from './index.ts';
+import type { CocktailCategory, Glassware } from './index';
 
 export interface CocktailCreatePayload {
   name: string;

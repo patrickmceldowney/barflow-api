@@ -1,7 +1,7 @@
 /**
  * Turn a string value into normalized slug value
  */
-export function createSlug(name: string) {
+export function createSlug(name: string): string {
   return name
     .toLowerCase()
     .replace(/[\s&.,'()]/g, '-') // Replace spaces, special chars with hyphen

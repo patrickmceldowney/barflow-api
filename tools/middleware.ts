@@ -1,16 +1,14 @@
-import type { Next } from 'https://deno.land/x/oak@v17.1.3/middleware.ts';
-import type { Context } from 'https://deno.land/x/oak@v17.1.3/mod.ts';
+import { Request, Response, NextFunction } from 'express';
 
-const apiKey = Deno.env.get('API_KEY');
+const apiKey = process.env.API_KEY;
 
-export async function apiAuth(ctx: Context, next: Next) {
-  const requestKey = ctx.request.headers.get('X-API-Key');
+export function apiAuth(req: Request, res: Response, next: NextFunction): void {
+  const requestKey = req.headers['x-api-key'] as string;
 
   if (apiKey !== requestKey) {
-    ctx.response.status = 401;
-    ctx.response.body = { error: 'Unauthorized' };
+    res.status(401).json({ error: 'Unauthorized' });
     return;
   }
 
-  await next();
+  next();
 }

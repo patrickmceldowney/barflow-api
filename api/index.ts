@@ -1,12 +1,19 @@
-import { Router } from 'https://deno.land/x/oak@v17.1.3/mod.ts';
-import cocktailRouter from './routes/cocktail.ts';
+import express from 'express';
+import cocktailRouter from './routes/cocktail';
+import authRouter from './routes/auth';
+import preferencesRouter from './routes/preferences';
+import recommendationsRouter from './routes/recommendations';
+import favoritesRouter from './routes/favorites';
 
-const router = new Router({ prefix: '/api' });
+const router = express.Router();
 
-router.use(
-  '/cocktails',
-  cocktailRouter.routes(),
-  cocktailRouter.allowedMethods()
-);
+// Public routes
+router.use('/cocktails', cocktailRouter);
+router.use('/auth', authRouter);
+router.use('/recommendations', recommendationsRouter);
+
+// Protected routes (require authentication)
+router.use('/preferences', preferencesRouter);
+router.use('/favorites', favoritesRouter);
 
 export default router;

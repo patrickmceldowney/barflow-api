@@ -61,6 +61,7 @@ export type IngredientType =
   | 'special';
 
 export interface Cocktail {
+  id?: number;
   category: CocktailCategory;
   description: string;
   garnish: string | null;

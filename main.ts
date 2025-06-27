@@ -1,66 +1,121 @@
-import router from './api/index.ts';
-import { Router } from 'https://deno.land/x/oak@v17.1.3/mod.ts';
-import { oakCors } from 'https://deno.land/x/cors@v1.2.2/mod.ts';
-import { Application } from 'https://deno.land/x/oak@v17.1.3/mod.ts';
-import { DatabaseClient } from './tools/db.ts';
-import { AppState } from './types/index.ts';
+import express, { Request, Response, NextFunction } from 'express';
+import cors from 'cors';
+import dotenv from 'dotenv';
+import helmet from 'helmet';
+import rateLimit from 'express-rate-limit';
+import apiRouter from './api/index';
 
-const port = Number(Deno.env.get('PORT')) || 3000;
-const app = new Application<AppState>();
-const db = new DatabaseClient();
+// Load environment variables
+dotenv.config();
+
+const port = process.env.PORT || 3000;
+const app = express();
+
+// Security middleware
+app.use(helmet());
+
+// Rate limiting
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100, // limit each IP to 100 requests per windowMs
+  message: 'Too many requests from this IP, please try again later.',
+});
+app.use('/api/', limiter);
+
+// Extend Request interface to include db
+declare global {
+  namespace Express {
+    interface Request {
+      db?: any; // Will be replaced with Prisma client type
+    }
+  }
+}
 
 try {
-  console.log(`Connected to the database...`);
+  console.log(`Starting Barflow API...`);
 
-  // Inject the db instance into the routes
-  app.use(async (ctx, next) => {
-    ctx.state.db = db;
-    await next();
-  });
-
-  app.use(oakCors());
+  // Middleware
+  app.use(express.json({ limit: '10mb' }));
+  app.use(express.urlencoded({ extended: true }));
+  app.use(
+    cors({
+      origin: process.env.CORS_ORIGIN || '*',
+      credentials: true,
+    })
+  );
 
   // Logger middleware
-  app.use(async (ctx, next) => {
-    await next();
-    const rt = ctx.response.headers.get('X-Response-Time');
-    console.log(`${ctx.request.method} ${ctx.request.url} - ${rt}`);
-  });
-
-  // Timing middleware
-  app.use(async (ctx, next) => {
+  app.use((req: Request, res: Response, next: NextFunction) => {
     const start = Date.now();
-    await next();
-    const ms = Date.now() - start;
-    ctx.response.headers.set('X-Response-Time', `${ms}ms`);
+    res.on('finish', () => {
+      const ms = Date.now() - start;
+      res.setHeader('X-Response-Time', `${ms}ms`);
+      console.log(`${req.method} ${req.url} - ${ms}ms`);
+    });
+    next();
   });
 
-  // Error handler
-  app.addEventListener('error', (evt) => {
-    console.log(evt.error);
+  // Inject db into request object (will be Prisma client)
+  app.use((req: Request, res: Response, next: NextFunction) => {
+    // TODO: Replace with Prisma client
+    req.db = null;
+    next();
   });
 
   // Routes
-  const apiRouter = new Router();
-  apiRouter.use(router.routes());
-  apiRouter.use(router.allowedMethods());
+  app.use('/api', apiRouter);
 
-  apiRouter.get('/', (ctx) => {
-    ctx.response.status = 200;
-    ctx.response.body = '<h1>Wecome to the Barflow API</h1>';
-    ctx.response.type = 'html';
+  app.get('/', (req: Request, res: Response) => {
+    res.status(200).json({
+      message: 'Welcome to the Barflow API',
+      version: '1.0.0',
+      endpoints: {
+        cocktails: '/api/cocktails',
+        auth: '/api/auth',
+        preferences: '/api/preferences',
+        recommendations: '/api/recommendations',
+        favorites: '/api/favorites',
+      },
+    });
   });
 
-  app.use(apiRouter.routes());
-  app.use(apiRouter.allowedMethods());
+  // Health check endpoint
+  app.get('/health', (req: Request, res: Response) => {
+    res.status(200).json({
+      status: 'OK',
+      timestamp: new Date().toISOString(),
+      uptime: process.uptime(),
+    });
+  });
 
-  console.log(`Listening on port ${port}...`);
-  await app.listen({ port });
+  // Error handler
+  app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
+    console.error(err.stack);
+    res.status(500).json({
+      error: 'Something went wrong!',
+      message:
+        process.env.NODE_ENV === 'development'
+          ? err.message
+          : 'Internal server error',
+    });
+  });
+
+  // 404 handler
+  app.use((req: Request, res: Response) => {
+    res.status(404).json({ error: 'Not found' });
+  });
+
+  app.listen(port, () => {
+    console.log(`🚀 Barflow API listening on port ${port}...`);
+    console.log(`📖 API Documentation: http://localhost:${port}`);
+    console.log(`🏥 Health Check: http://localhost:${port}/health`);
+  });
 } catch (error) {
   console.error(`Error starting application: `, error);
 }
 
-Deno.addSignalListener('SIGINT', () => {
+// Graceful shutdown
+process.on('SIGINT', () => {
   console.log('Gracefully shutting down...');
-  Deno.exit();
+  process.exit();
 });

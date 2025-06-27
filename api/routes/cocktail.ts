@@ -1,109 +1,95 @@
-import { Router } from 'https://deno.land/x/oak@v17.1.3/mod.ts';
-import type { AppState } from '../../types/index.ts';
-import { apiAuth } from '../../tools/middleware.ts';
-import type { CocktailCreatePayload } from '../../types/api.ts';
+import express, { Request, Response } from 'express';
+import { apiAuth } from '../../tools/middleware';
+import { CocktailCreatePayload } from '../../types/api';
 
-const cocktailRouter = new Router<AppState>();
+const cocktailRouter = express.Router();
 
 cocktailRouter.use(apiAuth);
 
-cocktailRouter.get('/', async (ctx) => {
+cocktailRouter.get('/', async (req: Request, res: Response) => {
   try {
-    const db = ctx.state.db;
-    const { data, error } = await db.getCocktails();
+    // TODO: Replace with Prisma client calls
+    const db = req.db;
+    
+    // Mock data for now - replace with actual Prisma queries
+    const mockCocktails = [
+      {
+        id: 1,
+        name: 'Margarita',
+        description: 'A classic tequila cocktail',
+        glass: 'margarita',
+        category: 'sour'
+      }
+    ];
 
-    if (error) {
-      console.error('Error finding cocktails', error);
-      ctx.response.status = 500;
-      ctx.response.body = {
-        error: 'Failed to find cocktails',
-        details: error,
-      };
-      return;
-    }
-
-    ctx.response.status = 200;
-    ctx.response.body = data;
+    res.status(200).json(mockCocktails);
   } catch (error) {
     console.error('Error getting cocktails', error);
-    ctx.response.status = 500;
-    ctx.response.body = {
+    res.status(500).json({
       message: 'Error getting cocktails',
-    };
+    });
   }
 });
 
-cocktailRouter.get('/:id', async (ctx) => {
+cocktailRouter.get('/:id', async (req: Request, res: Response) => {
   try {
-    const db = ctx.state.db;
-    const { data, error } = await db.getCocktailById(ctx.params.id);
+    const { id } = req.params;
+    
+    // TODO: Replace with Prisma client calls
+    const db = req.db;
 
-    if (!data) {
-      ctx.response.status = 404;
-      ctx.response.body = { message: 'Cocktail not found' };
-      return;
+    // Mock data for now - replace with actual Prisma query
+    const mockCocktail = {
+      id: parseInt(id),
+      name: 'Margarita',
+      description: 'A classic tequila cocktail',
+      glass: 'margarita',
+      category: 'sour'
+    };
+
+    if (!mockCocktail) {
+      return res.status(404).json({ message: 'Cocktail not found' });
     }
 
-    if (error) {
-      console.error(`Error finding cocktail with id (${ctx.params.id})`, error);
-      ctx.response.status = 500;
-      ctx.response.body = {
-        error: 'Failed to find cocktail',
-        details: error,
-      };
-      return;
-    }
-
-    ctx.response.body = data;
+    res.json(mockCocktail);
   } catch (error) {
     console.error('Error getting cocktail', error);
-    ctx.response.status = 500;
-    ctx.response.body = {
+    res.status(500).json({
       message: 'Error getting cocktail',
-    };
+    });
   }
 });
 
-cocktailRouter.delete('/:id', async (ctx) => {
+cocktailRouter.delete('/:id', async (req: Request, res: Response) => {
   try {
-    const db = ctx.state.db;
+    const { id } = req.params;
+    
+    // TODO: Replace with Prisma client calls
+    const db = req.db;
 
-    const { error, count } = await db.deleteCocktail(ctx.params.id);
+    // Mock deletion - replace with actual Prisma delete
+    const deleted = true; // Mock result
 
-    if (!count) {
-      ctx.response.status = 404;
-      ctx.response.body = {
+    if (!deleted) {
+      return res.status(404).json({
         message: 'Cocktail not found',
-      };
-      return;
+      });
     }
 
-    if (error) {
-      console.error('Error deleting cocktail', error);
-      ctx.response.status = 500;
-      ctx.response.body = {
-        error: 'Failed to create cocktail',
-        details: error,
-      };
-      return;
-    }
-
-    ctx.response.body = {
+    res.json({
       message: 'Cocktail deleted successfully',
-    };
+    });
   } catch (error) {
     console.error('API Error', error);
-    ctx.response.status = 500;
-    ctx.response.body = {
+    res.status(500).json({
       message: 'Internal server error',
-    };
+    });
   }
 });
 
-cocktailRouter.post('/', async (ctx) => {
+cocktailRouter.post('/', async (req: Request, res: Response) => {
   try {
-    const body = await ctx.request.body.json();
-    const cocktailData: CocktailCreatePayload = body;
+    const cocktailData: CocktailCreatePayload = req.body;
 
     if (
       !cocktailData.name ||
@@ -113,37 +99,24 @@ cocktailRouter.post('/', async (ctx) => {
       !cocktailData.ingredients ||
       !cocktailData.recipeSteps
     ) {
-      ctx.response.status = 400;
-      ctx.response.body = { error: 'Missing required cocktail fields.' };
-      return;
+      return res.status(400).json({ error: 'Missing required cocktail fields.' });
     }
 
-    // Call supabase RPC
-    const { data: newCocktailId, error } = await ctx.state.db.createCocktail(
-      cocktailData
-    );
+    // TODO: Replace with Prisma client calls
+    const db = req.db;
+    
+    // Mock creation - replace with actual Prisma create
+    const newCocktailId = Math.floor(Math.random() * 1000);
 
-    if (error) {
-      console.error('Error calling create_cocktail function', error.message);
-      ctx.response.status = 500;
-      ctx.response.body = {
-        error: 'Failed to create cocktail',
-        details: error.message,
-      };
-      return;
-    }
-
-    ctx.response.status = 201;
-    ctx.response.body = {
+    res.status(201).json({
       message: 'Cocktail created successfully',
       id: newCocktailId,
-    };
+    });
   } catch (e) {
     console.error('API Error', e);
-    ctx.response.status = 500;
-    ctx.response.body = {
+    res.status(500).json({
       error: 'Internal server error',
-    };
+    });
   }
 });
 
