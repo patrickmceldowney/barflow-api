@@ -102,9 +102,7 @@ tests
 .prettierrc
 .prettierignore
 jest.config.js
-tsconfig.json
 
 # Database
 *.db
-*.sqlite
-prisma/migrations 
+*.sqlite 
