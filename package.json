@@ -18,7 +18,10 @@
     "db:seed": "npx prisma db seed",
     "db:studio": "npx prisma studio",
     "db:migrate": "npx prisma migrate dev",
-    "db:generate": "npx prisma generate"
+    "db:migrate:deploy": "npx prisma migrate deploy",
+    "db:generate": "npx prisma generate",
+    "db:railway:migrate": "railway run npx prisma migrate deploy",
+    "db:railway:seed": "railway run npx prisma db seed"
   },
   "dependencies": {
     "@prisma/client": "^6.10.1",

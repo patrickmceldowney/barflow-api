@@ -1,6 +1,7 @@
 import express from 'express';
 import cocktailRouter from './routes/cocktail';
 import authRouter from './routes/auth';
+import userRouter from './routes/user';
 import preferencesRouter from './routes/preferences';
 import recommendationsRouter from './routes/recommendations';
 import favoritesRouter from './routes/favorites';
@@ -13,6 +14,7 @@ router.use('/auth', authRouter);
 router.use('/recommendations', recommendationsRouter);
 
 // Protected routes (require authentication)
+router.use('/user', userRouter);
 router.use('/preferences', preferencesRouter);
 router.use('/favorites', favoritesRouter);
 

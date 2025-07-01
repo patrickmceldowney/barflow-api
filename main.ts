@@ -32,7 +32,16 @@ declare global {
 }
 
 try {
-  console.log(`Starting Barflow API...`);
+  const environment = process.env.NODE_ENV || 'development';
+  const databaseInfo = process.env.DATABASE_URL
+    ? process.env.DATABASE_URL.includes('railway')
+      ? 'Railway PostgreSQL'
+      : 'Local PostgreSQL'
+    : 'No database configured';
+
+  console.log(`🚀 Starting Barflow API...`);
+  console.log(`🌍 Environment: ${environment}`);
+  console.log(`🗄️  Database: ${databaseInfo}`);
 
   // Middleware
   app.use(express.json({ limit: '10mb' }));
@@ -69,9 +78,14 @@ try {
     res.status(200).json({
       message: 'Welcome to the Barflow API',
       version: '1.0.0',
+      environment: process.env.NODE_ENV || 'development',
+      database: process.env.DATABASE_URL?.includes('railway')
+        ? 'Railway PostgreSQL'
+        : 'Local PostgreSQL',
       endpoints: {
         cocktails: '/api/cocktails',
         auth: '/api/auth',
+        user: '/api/user',
         preferences: '/api/preferences',
         recommendations: '/api/recommendations',
         favorites: '/api/favorites',
@@ -107,8 +121,14 @@ try {
 
   app.listen(port, () => {
     console.log(`🚀 Barflow API listening on port ${port}...`);
-    console.log(`📖 API Documentation: http://localhost:${port}`);
-    console.log(`🏥 Health Check: http://localhost:${port}/health`);
+
+    if (environment === 'development') {
+      console.log(`📖 API Documentation: http://localhost:${port}`);
+      console.log(`🏥 Health Check: http://localhost:${port}/health`);
+    } else {
+      console.log(`🌍 Production environment - API is live!`);
+      console.log(`🏥 Health Check: /health`);
+    }
   });
 } catch (error) {
   console.error(`Error starting application: `, error);

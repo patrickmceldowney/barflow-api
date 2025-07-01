@@ -60,10 +60,10 @@ npm install prisma @prisma/client
 npx prisma init
 
 # Generate Prisma client
-npx prisma generate
+npm run db:generate
 
 # Run migrations
-npx prisma migrate dev
+npm run db:migrate
 ```
 
 ### 5. Start Development Server
@@ -143,7 +143,13 @@ docker-compose up -d --build
 ### Authentication
 - `POST /api/auth/register` - Register new user
 - `POST /api/auth/login` - Login user
-- `GET /api/auth/profile` - Get user profile
+
+### User Management
+- `GET /api/user/profile` - Get user profile
+- `PUT /api/user/profile` - Update user profile
+- `PUT /api/user/password` - Change password
+- `DELETE /api/user/account` - Delete account
+- `GET /api/user/stats` - Get user statistics
 
 ### Cocktails
 - `GET /api/cocktails` - Get all cocktails
@@ -200,10 +206,18 @@ docker-compose -f docker-compose.prod.yml up -d
 
 The API is ready for deployment on various platforms:
 
-#### Railway
-- Connect your GitHub repository
-- Set environment variables
-- Automatic deployment on push
+#### Railway (Recommended)
+- **Quick Setup**: Use the automated deployment script
+  ```bash
+  # Windows
+  scripts\railway-deploy.bat
+  
+  # Linux/Mac
+  ./scripts/railway-deploy.sh
+  ```
+- **Manual Setup**: Connect your GitHub repository and set environment variables
+- **Features**: Automatic PostgreSQL database, SSL certificates, auto-scaling
+- **Documentation**: See [RAILWAY_DEPLOYMENT.md](./RAILWAY_DEPLOYMENT.md) for detailed guide
 
 #### Render
 - Connect your GitHub repository
@@ -233,6 +247,7 @@ barflow-api/
 │   ├── index.ts              # API router
 │   └── routes/
 │       ├── auth.ts           # Authentication routes
+│       ├── user.ts           # User management routes
 │       ├── cocktail.ts       # Cocktail routes
 │       ├── favorites.ts      # Favorites routes
 │       ├── preferences.ts    # User preferences
@@ -248,6 +263,8 @@ barflow-api/
 │   └── main.test.ts        # API tests
 ├── scripts/
 │   ├── docker-setup.sh     # Docker setup script
+│   ├── railway-deploy.sh   # Railway deployment script (Linux/Mac)
+│   ├── railway-deploy.bat  # Railway deployment script (Windows)
 │   └── seed.ts             # Database seeding
 ├── docker/
 │   └── postgres/
