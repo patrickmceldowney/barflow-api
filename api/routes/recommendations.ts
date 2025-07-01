@@ -89,7 +89,7 @@ recommendationsRouter.post(
         return true;
       });
 
-      res.json({
+      return res.json({
         recommendations: filteredRecommendations,
         totalFound: filteredRecommendations.length,
         preferences: {
@@ -102,7 +102,7 @@ recommendationsRouter.post(
       });
     } catch (error) {
       console.error('Recommendations error:', error);
-      res.status(500).json({ error: 'Internal server error' });
+      return res.status(500).json({ error: 'Internal server error' });
     }
   }
 );
@@ -141,13 +141,13 @@ recommendationsRouter.get('/discover', async (req: Request, res: Response) => {
       },
     ];
 
-    res.json({
+    return res.json({
       cocktails: mockRandomCocktails,
       totalFound: mockRandomCocktails.length,
     });
   } catch (error) {
     console.error('Discover error:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    return res.status(500).json({ error: 'Internal server error' });
   }
 });
 
@@ -181,13 +181,13 @@ recommendationsRouter.get('/trending', async (req: Request, res: Response) => {
       },
     ];
 
-    res.json({
+    return res.json({
       cocktails: mockTrendingCocktails,
       totalFound: mockTrendingCocktails.length,
     });
   } catch (error) {
     console.error('Trending error:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    return res.status(500).json({ error: 'Internal server error' });
   }
 });
 

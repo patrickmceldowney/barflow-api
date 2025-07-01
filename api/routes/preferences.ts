@@ -23,10 +23,10 @@ preferencesRouter.get('/', async (req: Request, res: Response) => {
       preferredGlassware: ['coupe', 'rocks'],
     };
 
-    res.json(preferences);
+    return res.json(preferences);
   } catch (error) {
     console.error('Get preferences error:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    return res.status(500).json({ error: 'Internal server error' });
   }
 });
 
@@ -67,7 +67,7 @@ preferencesRouter.put('/', async (req: Request, res: Response) => {
     //   },
     // });
 
-    res.json({
+    return res.json({
       message: 'Preferences updated successfully',
       preferences: {
         favoriteFlavors,
@@ -80,7 +80,7 @@ preferencesRouter.put('/', async (req: Request, res: Response) => {
     });
   } catch (error) {
     console.error('Update preferences error:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    return res.status(500).json({ error: 'Internal server error' });
   }
 });
 
@@ -145,10 +145,10 @@ preferencesRouter.get('/questionnaire', async (req: Request, res: Response) => {
       },
     ];
 
-    res.json(questions);
+    return res.json(questions);
   } catch (error) {
     console.error('Get questionnaire error:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    return res.status(500).json({ error: 'Internal server error' });
   }
 });
 

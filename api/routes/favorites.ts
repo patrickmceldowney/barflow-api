@@ -50,13 +50,13 @@ favoritesRouter.get('/', async (req: Request, res: Response) => {
       },
     ];
 
-    res.json({
+    return res.json({
       favorites: mockFavorites,
       totalCount: mockFavorites.length,
     });
   } catch (error) {
     console.error('Get favorites error:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    return res.status(500).json({ error: 'Internal server error' });
   }
 });
 
@@ -98,7 +98,7 @@ favoritesRouter.post('/:cocktailId', async (req: Request, res: Response) => {
     //   }
     // });
 
-    res.status(201).json({
+    return res.status(201).json({
       message: 'Cocktail added to favorites',
       favorite: {
         id: 3,
@@ -108,7 +108,7 @@ favoritesRouter.post('/:cocktailId', async (req: Request, res: Response) => {
     });
   } catch (error) {
     console.error('Add favorite error:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    return res.status(500).json({ error: 'Internal server error' });
   }
 });
 
@@ -132,12 +132,12 @@ favoritesRouter.delete('/:cocktailId', async (req: Request, res: Response) => {
     //   return res.status(404).json({ error: 'Favorite not found' });
     // }
 
-    res.json({
+    return res.json({
       message: 'Cocktail removed from favorites',
     });
   } catch (error) {
     console.error('Remove favorite error:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    return res.status(500).json({ error: 'Internal server error' });
   }
 });
 
@@ -162,13 +162,13 @@ favoritesRouter.get(
       // Mock response
       const isFavorited = Math.random() > 0.5; // Random for demo
 
-      res.json({
+      return res.json({
         isFavorited,
         cocktailId: parseInt(cocktailId),
       });
     } catch (error) {
       console.error('Check favorite error:', error);
-      res.status(500).json({ error: 'Internal server error' });
+      return res.status(500).json({ error: 'Internal server error' });
     }
   }
 );

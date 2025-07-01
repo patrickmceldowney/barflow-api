@@ -4,6 +4,7 @@ import dotenv from 'dotenv';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
 import apiRouter from './api/index';
+import prisma from './tools/prisma';
 
 // Load environment variables
 dotenv.config();
@@ -56,18 +57,54 @@ try {
   // Logger middleware
   app.use((req: Request, res: Response, next: NextFunction) => {
     const start = Date.now();
-    res.on('finish', () => {
+
+    // Track if response has been sent
+    let responseSent = false;
+
+    // Override res.json to track responses and set response time header
+    const originalJson = res.json;
+    res.json = function (data) {
+      if (responseSent) {
+        console.error(
+          `🚨 DOUBLE RESPONSE DETECTED on ${req.method} ${req.url}`
+        );
+        console.error(
+          'First response was already sent, ignoring second response'
+        );
+        return res;
+      }
+      responseSent = true;
       const ms = Date.now() - start;
       res.setHeader('X-Response-Time', `${ms}ms`);
+      console.log(`📤 Sending response for ${req.method} ${req.url}`);
+      return originalJson.call(this, data);
+    };
+
+    // Override res.status to track responses
+    const originalStatus = res.status;
+    res.status = function (code) {
+      if (responseSent) {
+        console.error(
+          `🚨 DOUBLE RESPONSE DETECTED on ${req.method} ${req.url}`
+        );
+        console.error(
+          'First response was already sent, trying to set status again'
+        );
+        return res;
+      }
+      return originalStatus.call(this, code);
+    };
+
+    res.on('finish', () => {
+      const ms = Date.now() - start;
       console.log(`${req.method} ${req.url} - ${ms}ms`);
     });
     next();
   });
 
-  // Inject db into request object (will be Prisma client)
+  // Inject Prisma client into request object
   app.use((req: Request, res: Response, next: NextFunction) => {
-    // TODO: Replace with Prisma client
-    req.db = null;
+    req.db = prisma;
     next();
   });
 
@@ -105,7 +142,7 @@ try {
   // Error handler
   app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
     console.error(err.stack);
-    res.status(500).json({
+    return res.status(500).json({
       error: 'Something went wrong!',
       message:
         process.env.NODE_ENV === 'development'
@@ -116,7 +153,7 @@ try {
 
   // 404 handler
   app.use((req: Request, res: Response) => {
-    res.status(404).json({ error: 'Not found' });
+    return res.status(404).json({ error: 'Not found' });
   });
 
   app.listen(port, () => {

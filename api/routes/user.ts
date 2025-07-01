@@ -3,9 +3,6 @@
 import express, { Request, Response } from 'express';
 import bcrypt from 'bcryptjs';
 import { body, validationResult } from 'express-validator';
-import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient();
 const userRouter = express.Router();
 
 // Note: Request.user type is already defined in main.ts
@@ -29,7 +26,7 @@ const authenticateUser = async (
       process.env.JWT_SECRET || 'fallback-secret'
     );
 
-    const user = await prisma.user.findUnique({
+    const user = await req.db.user.findUnique({
       where: { id: decoded.userId },
       include: { preferences: true },
     });
@@ -60,12 +57,12 @@ userRouter.get(
       // Remove password from response
       const { password, ...userWithoutPassword } = user as any;
 
-      res.json({
+      return res.json({
         user: userWithoutPassword,
       });
     } catch (error) {
       console.error('Get profile error:', error);
-      res.status(500).json({ error: 'Internal server error' });
+      return res.status(500).json({ error: 'Internal server error' });
     }
   }
 );
@@ -99,7 +96,7 @@ userRouter.put(
 
       // Check if username or email already exists
       if (username) {
-        const existingUser = await prisma.user.findFirst({
+        const existingUser = await req.db.user.findFirst({
           where: {
             username,
             NOT: { id: userId },
@@ -111,7 +108,7 @@ userRouter.put(
       }
 
       if (email) {
-        const existingUser = await prisma.user.findFirst({
+        const existingUser = await req.db.user.findFirst({
           where: {
             email,
             NOT: { id: userId },
@@ -123,7 +120,7 @@ userRouter.put(
       }
 
       // Update user
-      const updatedUser = await prisma.user.update({
+      const updatedUser = await req.db.user.update({
         where: { id: userId },
         data: {
           ...(username && { username }),
@@ -135,13 +132,13 @@ userRouter.put(
 
       const { password, ...userWithoutPassword } = updatedUser;
 
-      res.json({
+      return res.json({
         message: 'Profile updated successfully',
         user: userWithoutPassword,
       });
     } catch (error) {
       console.error('Update profile error:', error);
-      res.status(500).json({ error: 'Internal server error' });
+      return res.status(500).json({ error: 'Internal server error' });
     }
   }
 );
@@ -175,7 +172,7 @@ userRouter.put(
       const userId = user.id;
 
       // Get user with current password
-      const userWithPassword = await prisma.user.findUnique({
+      const userWithPassword = await req.db.user.findUnique({
         where: { id: userId },
       });
 
@@ -196,7 +193,7 @@ userRouter.put(
       const hashedNewPassword = await bcrypt.hash(newPassword, 12);
 
       // Update password
-      await prisma.user.update({
+      await req.db.user.update({
         where: { id: userId },
         data: {
           password: hashedNewPassword,
@@ -204,12 +201,12 @@ userRouter.put(
         },
       });
 
-      res.json({
+      return res.json({
         message: 'Password changed successfully',
       });
     } catch (error) {
       console.error('Change password error:', error);
-      res.status(500).json({ error: 'Internal server error' });
+      return res.status(500).json({ error: 'Internal server error' });
     }
   }
 );
@@ -240,7 +237,7 @@ userRouter.delete(
       const userId = user.id;
 
       // Get user with current password
-      const userWithPassword = await prisma.user.findUnique({
+      const userWithPassword = await req.db.user.findUnique({
         where: { id: userId },
       });
 
@@ -258,16 +255,16 @@ userRouter.delete(
       }
 
       // Delete user (this will cascade delete preferences and favorites)
-      await prisma.user.delete({
+      await req.db.user.delete({
         where: { id: userId },
       });
 
-      res.json({
+      return res.json({
         message: 'Account deleted successfully',
       });
     } catch (error) {
       console.error('Delete account error:', error);
-      res.status(500).json({ error: 'Internal server error' });
+      return res.status(500).json({ error: 'Internal server error' });
     }
   }
 );
@@ -287,17 +284,17 @@ userRouter.get(
       const userId = user.id;
 
       // Get user's favorite count
-      const favoriteCount = await prisma.userFavorite.count({
+      const favoriteCount = await req.db.userFavorite.count({
         where: { userId },
       });
 
       // Get user's preferences
-      const preferences = await prisma.userPreferences.findUnique({
+      const preferences = await req.db.userPreferences.findUnique({
         where: { userId },
       });
 
       // Get recent favorites (last 5)
-      const recentFavorites = await prisma.userFavorite.findMany({
+      const recentFavorites = await req.db.userFavorite.findMany({
         where: { userId },
         include: {
           cocktail: {
@@ -314,7 +311,7 @@ userRouter.get(
         take: 5,
       });
 
-      res.json({
+      return res.json({
         stats: {
           totalFavorites: favoriteCount,
           preferences: preferences
@@ -332,7 +329,7 @@ userRouter.get(
       });
     } catch (error) {
       console.error('Get stats error:', error);
-      res.status(500).json({ error: 'Internal server error' });
+      return res.status(500).json({ error: 'Internal server error' });
     }
   }
 );

@@ -1,9 +1,3 @@
-import type { DatabaseClient } from '../tools/db.ts';
-
-export interface AppState {
-  db: DatabaseClient;
-}
-
 export type Unit =
   | 'dash'
   | 'ounce'

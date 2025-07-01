@@ -2,9 +2,6 @@ import express, { Request, Response } from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { body, validationResult } from 'express-validator';
-import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient();
 
 const authRouter = express.Router();
 
@@ -30,7 +27,7 @@ authRouter.post(
       const { email, password, username } = req.body;
 
       // Check if user already exists
-      const existingUser = await prisma.user.findFirst({
+      const existingUser = await req.db.user.findFirst({
         where: {
           OR: [{ email }, { username }],
         },
@@ -49,7 +46,7 @@ authRouter.post(
       const hashedPassword = await bcrypt.hash(password, 12);
 
       // Create user
-      const user = await prisma.user.create({
+      const user = await req.db.user.create({
         data: {
           email,
           username,
@@ -64,7 +61,7 @@ authRouter.post(
         { expiresIn: '7d' }
       );
 
-      res.status(201).json({
+      return res.status(201).json({
         message: 'User created successfully',
         token,
         user: {
@@ -75,7 +72,7 @@ authRouter.post(
       });
     } catch (error) {
       console.error('Registration error:', error);
-      res.status(500).json({ error: 'Internal server error' });
+      return res.status(500).json({ error: 'Internal server error' });
     }
   }
 );
@@ -97,7 +94,7 @@ authRouter.post(
       const { email, password } = req.body;
 
       // Find user with Prisma
-      const user = await prisma.user.findUnique({ where: { email } });
+      const user = await req.db.user.findUnique({ where: { email } });
       if (!user) {
         return res.status(401).json({ error: 'Invalid credentials' });
       }
@@ -115,7 +112,7 @@ authRouter.post(
         { expiresIn: '7d' }
       );
 
-      res.json({
+      return res.json({
         message: 'Login successful',
         token,
         user: {
@@ -126,7 +123,7 @@ authRouter.post(
       });
     } catch (error) {
       console.error('Login error:', error);
-      res.status(500).json({ error: 'Internal server error' });
+      return res.status(500).json({ error: 'Internal server error' });
     }
   }
 );
